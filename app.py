@@ -1,6 +1,7 @@
 import gradio as gr
 import torchaudio
 import time
+from datetime import datetime
 from tortoise.api import TextToSpeech
 from tortoise.utils.audio import load_audio, load_voice, load_voices
 
@@ -52,7 +53,7 @@ def inference(text, voice, voice_b, voice_c, preset, seed):
         voice_samples, conditioning_latents = load_voice(voice)
     else:
         voice_samples, conditioning_latents = load_voices(voices)
-        
+
     sample_voice = voice_samples[0] if len(voice_samples) else None
 
     start_time = time.time()
@@ -66,7 +67,7 @@ def inference(text, voice, voice_b, voice_c, preset, seed):
     )
 
     with open("Tortoise_TTS_Runs.log", "a") as f:
-        f.write(f"{datetime.now()} | Voice: {voice} | Text: {text} | Quality: {preset} | Time Taken (s): {time.time()-start_time} | Seed: {seed}")
+        f.write(f"{datetime.now()} | Voice: {','.join(voices)} | Text: {text} | Quality: {preset} | Time Taken (s): {time.time()-start_time} | Seed: {seed}\n")
 
     return (
         (22050, sample_voice.squeeze().cpu().numpy()),
