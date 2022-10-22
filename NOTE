@@ -1,0 +1,2 @@
+Maybe required for Windows Anaconda:
+conda install -c conda-forge librosa

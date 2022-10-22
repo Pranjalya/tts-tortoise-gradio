@@ -8,5 +8,8 @@ einops
 unidecode
 scipy
 librosa
-numba==0.48.0
+numba
 ffmpeg
+gradio
+torch
+torchaudio
