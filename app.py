@@ -1,5 +1,6 @@
 import gradio as gr
 import torchaudio
+import time
 from tortoise.api import TextToSpeech
 from tortoise.utils.audio import load_audio, load_voice, load_voices
 
@@ -40,15 +41,33 @@ VOICE_OPTIONS = [
 ]
 
 
-def inference(text, voice, preset, seed):
-    voice_samples, conditioning_latents = load_voice(voice)
+def inference(text, voice, voice_b, voice_c, preset, seed):
+    voices = [voice]
+    if voice_b != "disabled":
+        voices.append(voice_b)
+    if voice_c != "disabled":
+        voices.append(voice_c)
+    
+    if len(voices) == 1:
+        voice_samples, conditioning_latents = load_voice(voice)
+    else:
+        voice_samples, conditioning_latents = load_voices(voices)
+        
     sample_voice = voice_samples[0] if len(voice_samples) else None
-    gen = tts.tts_with_preset(
+
+    start_time = time.time()
+    gen, _ = tts.tts_with_preset(
         text,
         voice_samples=voice_samples,
         conditioning_latents=conditioning_latents,
         preset=preset,
+        use_deterministic_seed=seed,
+        return_deterministic_state=True
     )
+
+    with open("Tortoise_TTS_Runs.log", "a") as f:
+        f.write(f"{datetime.now()} | Voice: {voice} | Text: {text} | Quality: {preset} | Time Taken (s): {time.time()-start_time} | Seed: {seed}")
+
     return (
         (22050, sample_voice.squeeze().cpu().numpy()),
         (24000, gen.squeeze().cpu().numpy()),
@@ -66,13 +85,19 @@ def main():
     voice = gr.Dropdown(
         VOICE_OPTIONS, value="angie", label="Select voice:", type="value"
     )
+    voice_b = gr.Dropdown(
+        VOICE_OPTIONS, value="disabled", label="(Optional) Select second voice:", type="value"
+    )
+    voice_c = gr.Dropdown(
+        VOICE_OPTIONS, value="disabled", label="(Optional) Select third voice:", type="value"
+    )
     seed = gr.Number(value=0, precision=0, label="Seed (for reproducibility):")
-    selected_voice = gr.Audio(label="Sample of selected voice:")
+    selected_voice = gr.Audio(label="Sample of selected voice (first):")
     output_audio = gr.Audio(label="Output:")
 
     interface = gr.Interface(
         fn=inference,
-        inputs=[text, voice, preset, seed],
+        inputs=[text, voice, voice_b, voice_c, preset, seed],
         outputs=[selected_voice, output_audio],
     )
     interface.launch(share=True)
@@ -80,4 +105,8 @@ def main():
 
 if __name__ == "__main__":
     tts = TextToSpeech()
+    
+    with open("Tortoise_TTS_Runs.log", "a") as f:
+        f.write(f"\n\n-------------------------Tortoise TTS Logs, {datetime.now()}-------------------------\n")
+
     main()
