@@ -1,4 +1,5 @@
 import gradio as gr
+import torchaudio
 from tortoise.api import TextToSpeech
 from tortoise.utils.audio import load_audio, load_voice, load_voices
 
@@ -38,6 +39,7 @@ VOICE_OPTIONS = [
     "disabled",  # special option for disabled voice
 ]
 
+
 def inference(text, voice, preset, seed):
     voice_samples, conditioning_latents = load_voice(voice)
     sample_voice = voice_samples[0] if len(voice_samples) else None
@@ -47,7 +49,10 @@ def inference(text, voice, preset, seed):
         conditioning_latents=conditioning_latents,
         preset=preset,
     )
-    return (22050, sample_voice.cpu().numpy()), (24000, gen.squeeze(0).cpu().numpy())
+    return (
+        (22050, sample_voice.squeeze().cpu().numpy()),
+        (24000, gen.squeeze().cpu().numpy()),
+    )
 
 
 def main():
@@ -74,6 +79,5 @@ def main():
 
 
 if __name__ == "__main__":
-    print("Here")
     tts = TextToSpeech()
     main()
