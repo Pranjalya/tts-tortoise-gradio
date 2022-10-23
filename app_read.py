@@ -49,6 +49,9 @@ def inference(text, script, name, voice, voice_b, voice_c, preset, seed, regener
     if regenerate.strip() == "":
         regenerate = None
 
+    if name.strip() == "":
+        raise gr.Error("No name provided")
+
     if text is None or text.strip() == "":
         with open(script.name) as f:
             text = f.read()
