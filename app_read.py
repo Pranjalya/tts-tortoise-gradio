@@ -1,3 +1,5 @@
+import os
+import torch
 import gradio as gr
 import torchaudio
 import time
@@ -44,8 +46,11 @@ VOICE_OPTIONS = [
 
 
 def inference(text, script, name, voice, voice_b, voice_c, preset, seed, regenerate, split_by_newline):
+    if regenerate.strip() == "":
+        regenerate = None
+
     if text is None or text.strip() == "":
-        with open(script) as f:
+        with open(script.name) as f:
             text = f.read()
         if text.strip() == "":
             raise gr.Error("Please provide either text or script file with content.")
@@ -75,7 +80,7 @@ def inference(text, script, name, voice, voice_b, voice_c, preset, seed, regener
 
     all_parts = []
     for j, text in enumerate(texts):
-        if regenerate is not None and j not in regenerate:
+        if regenerate is not None and j+1 not in regenerate:
             all_parts.append(load_audio(os.path.join("longform", name, f'{j+1}.wav'), 24000))
             continue
         gen = tts.tts_with_preset(text, voice_samples=voice_samples, conditioning_latents=conditioning_latents,
@@ -87,6 +92,8 @@ def inference(text, script, name, voice, voice_b, voice_c, preset, seed, regener
         all_parts.append(gen)
     
     full_audio = torch.cat(all_parts, dim=-1)
+    
+    os.makedirs("outputs", exist_ok=True)
     torchaudio.save(os.path.join("outputs", f'{name}.wav'), full_audio, 24000)
 
     with open("Tortoise_TTS_Runs_Scripts.log", "a") as f:
