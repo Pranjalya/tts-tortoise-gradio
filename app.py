@@ -53,7 +53,7 @@ def inference(text, emotion, prompt, voice, voice_b, voice_c, preset, seed):
         text = f"[I am really {emotion.lower()},] {text}"
     elif prompt.strip() != "":
         text = f"[{prompt},] {text}"    
-        
+
     if len(voices) == 1:
         voice_samples, conditioning_latents = load_voice(voice)
     else:
@@ -112,7 +112,7 @@ def main():
     interface = gr.Interface(
         fn=inference,
         inputs=[text, emotion, prompt, voice, voice_b, voice_c, preset, seed],
-        outputs=[selected_voice, output_audio, output_audio_2, output_audio_3],
+        outputs=[selected_voice, output_audio_1, output_audio_2, output_audio_3],
     )
     interface.launch(share=True)
 
