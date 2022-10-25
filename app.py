@@ -42,13 +42,18 @@ VOICE_OPTIONS = [
 ]
 
 
-def inference(text, voice, voice_b, voice_c, preset, seed):
+def inference(text, emotion, prompt, voice, voice_b, voice_c, preset, seed):
     voices = [voice]
     if voice_b != "disabled":
         voices.append(voice_b)
     if voice_c != "disabled":
         voices.append(voice_c)
     
+    if emotion != "None/Custom":
+        text = f"[I am really {emotion.lower()},] {text}"
+    elif prompt.strip() != "":
+        text = f"[{prompt},] {text}"    
+        
     if len(voices) == 1:
         voice_samples, conditioning_latents = load_voice(voice)
     else:
@@ -63,7 +68,8 @@ def inference(text, voice, voice_b, voice_c, preset, seed):
         conditioning_latents=conditioning_latents,
         preset=preset,
         use_deterministic_seed=seed,
-        return_deterministic_state=True
+        return_deterministic_state=True,
+        k=3
     )
 
     with open("Tortoise_TTS_Runs.log", "a") as f:
@@ -71,12 +77,16 @@ def inference(text, voice, voice_b, voice_c, preset, seed):
 
     return (
         (22050, sample_voice.squeeze().cpu().numpy()),
-        (24000, gen.squeeze().cpu().numpy()),
+        (24000, gen[0].squeeze().cpu().numpy()),
+        (24000, gen[1].squeeze().cpu().numpy()),
+        (24000, gen[2].squeeze().cpu().numpy()),
     )
 
 
 def main():
     text = gr.Textbox(lines=4, label="Text:")
+    emotion = gr.Radio(["None/Custom", "Happy", "Sad", "Angry", "Disgusted", "Arrogant"], value="None/Custom", label="Select emotion:", type="value")
+    prompt = gr.Textbox(lines=1, label="Enter prompt if [Custom] emotion:")
     preset = gr.Radio(
         ["ultra_fast", "fast", "standard", "high_quality"],
         value="fast",
@@ -93,13 +103,16 @@ def main():
         VOICE_OPTIONS, value="disabled", label="(Optional) Select third voice:", type="value"
     )
     seed = gr.Number(value=0, precision=0, label="Seed (for reproducibility):")
+
     selected_voice = gr.Audio(label="Sample of selected voice (first):")
-    output_audio = gr.Audio(label="Output:")
+    output_audio_1 = gr.Audio(label="Output [Candidate 1]:")
+    output_audio_2 = gr.Audio(label="Output [Candidate 2]:")
+    output_audio_3 = gr.Audio(label="Output [Candidate 3]:")
 
     interface = gr.Interface(
         fn=inference,
-        inputs=[text, voice, voice_b, voice_c, preset, seed],
-        outputs=[selected_voice, output_audio],
+        inputs=[text, emotion, prompt, voice, voice_b, voice_c, preset, seed],
+        outputs=[selected_voice, output_audio, output_audio_2, output_audio_3],
     )
     interface.launch(share=True)
 
