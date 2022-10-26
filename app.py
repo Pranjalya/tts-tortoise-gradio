@@ -35,15 +35,16 @@ def inference(text, emotion, prompt, voice, mic_audio, voice_b, voice_c, preset,
             raise gr.Error("Please provide audio from mic when choosing custom voice")
         c = load_audio(mic_audio, 22050)
 
-    if len(voices) == 1:
+
+    if len(voices) == 1 or len(voices) == 0:
         if voice == "custom_voice":
-            voice_samples, conditioning_latents = c, None
+            voice_samples, conditioning_latents = [c], None
         else:
             voice_samples, conditioning_latents = load_voice(voice)
     else:
         voice_samples, conditioning_latents = load_voices(voices)
         if voice == "custom_voice":
-            voice_samples.extend(c)
+            voice_samples.extend([c])
 
     sample_voice = voice_samples[0] if len(voice_samples) else None
 
@@ -55,7 +56,7 @@ def inference(text, emotion, prompt, voice, mic_audio, voice_b, voice_c, preset,
         preset=preset,
         use_deterministic_seed=seed,
         return_deterministic_state=True,
-        k=1,
+        k=3,
     )
 
     with open("Tortoise_TTS_Runs.log", "a") as f:
@@ -66,10 +67,8 @@ def inference(text, emotion, prompt, voice, mic_audio, voice_b, voice_c, preset,
     return (
         (22050, sample_voice.squeeze().cpu().numpy()),
         (24000, gen[0].squeeze().cpu().numpy()),
-        None,
-        None
-        # (24000, gen[1].squeeze().cpu().numpy()),
-        # (24000, gen[2].squeeze().cpu().numpy()),
+        (24000, gen[1].squeeze().cpu().numpy()),
+        (24000, gen[2].squeeze().cpu().numpy()),
     )
 
 
