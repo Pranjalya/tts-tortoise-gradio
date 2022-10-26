@@ -42,22 +42,37 @@ VOICE_OPTIONS = [
 ]
 
 
-def inference(text, emotion, prompt, voice, voice_b, voice_c, preset, seed):
-    voices = [voice]
+def inference(text, emotion, prompt, voice, mic_audio, voice_b, voice_c, preset, seed):
+    if voice != "custom_voice":
+        voices = [voice]
+    else:
+        voices = []
+
     if voice_b != "disabled":
         voices.append(voice_b)
     if voice_c != "disabled":
         voices.append(voice_c)
-    
+
     if emotion != "None/Custom":
         text = f"[I am really {emotion.lower()},] {text}"
     elif prompt.strip() != "":
-        text = f"[{prompt},] {text}"    
+        text = f"[{prompt},] {text}"
+
+    c = None
+    if voice == "custom_voice":
+        if mic_audio is None:
+            raise gr.Error("Please provide audio from mic when choosing custom voice")
+        c = load_audio(mic_audio, 22050)
 
     if len(voices) == 1:
-        voice_samples, conditioning_latents = load_voice(voice)
+        if voice == "custom_voice":
+            voice_samples, conditioning_latents = c, None
+        else:
+            voice_samples, conditioning_latents = load_voice(voice)
     else:
         voice_samples, conditioning_latents = load_voices(voices)
+        if voice == "custom_voice":
+            voice_samples.extend(c)
 
     sample_voice = voice_samples[0] if len(voice_samples) else None
 
@@ -69,23 +84,31 @@ def inference(text, emotion, prompt, voice, voice_b, voice_c, preset, seed):
         preset=preset,
         use_deterministic_seed=seed,
         return_deterministic_state=True,
-        k=3
+        k=1,
     )
 
     with open("Tortoise_TTS_Runs.log", "a") as f:
-        f.write(f"{datetime.now()} | Voice: {','.join(voices)} | Text: {text} | Quality: {preset} | Time Taken (s): {time.time()-start_time} | Seed: {seed}\n")
+        f.write(
+            f"{datetime.now()} | Voice: {','.join(voices)} | Text: {text} | Quality: {preset} | Time Taken (s): {time.time()-start_time} | Seed: {seed}\n"
+        )
 
     return (
         (22050, sample_voice.squeeze().cpu().numpy()),
         (24000, gen[0].squeeze().cpu().numpy()),
-        (24000, gen[1].squeeze().cpu().numpy()),
-        (24000, gen[2].squeeze().cpu().numpy()),
+        None, None
+        # (24000, gen[1].squeeze().cpu().numpy()),
+        # (24000, gen[2].squeeze().cpu().numpy()),
     )
 
 
 def main():
     text = gr.Textbox(lines=4, label="Text:")
-    emotion = gr.Radio(["None/Custom", "Happy", "Sad", "Angry", "Disgusted", "Arrogant"], value="None/Custom", label="Select emotion:", type="value")
+    emotion = gr.Radio(
+        ["None/Custom", "Happy", "Sad", "Angry", "Disgusted", "Arrogant"],
+        value="None/Custom",
+        label="Select emotion:",
+        type="value",
+    )
     prompt = gr.Textbox(lines=1, label="Enter prompt if [Custom] emotion:")
     preset = gr.Radio(
         ["ultra_fast", "fast", "standard", "high_quality"],
@@ -96,11 +119,20 @@ def main():
     voice = gr.Dropdown(
         VOICE_OPTIONS, value="angie", label="Select voice:", type="value"
     )
+    mic_audio = gr.Audio(
+        label="Record voice (when selected custom_voice):", source="microphone", type="filepath"
+    )
     voice_b = gr.Dropdown(
-        VOICE_OPTIONS, value="disabled", label="(Optional) Select second voice:", type="value"
+        VOICE_OPTIONS,
+        value="disabled",
+        label="(Optional) Select second voice:",
+        type="value",
     )
     voice_c = gr.Dropdown(
-        VOICE_OPTIONS, value="disabled", label="(Optional) Select third voice:", type="value"
+        VOICE_OPTIONS,
+        value="disabled",
+        label="(Optional) Select third voice:",
+        type="value",
     )
     seed = gr.Number(value=0, precision=0, label="Seed (for reproducibility):")
 
@@ -111,7 +143,7 @@ def main():
 
     interface = gr.Interface(
         fn=inference,
-        inputs=[text, emotion, prompt, voice, voice_b, voice_c, preset, seed],
+        inputs=[text, emotion, prompt, voice, mic_audio, voice_b, voice_c, preset, seed],
         outputs=[selected_voice, output_audio_1, output_audio_2, output_audio_3],
     )
     interface.launch(share=True)
@@ -119,8 +151,10 @@ def main():
 
 if __name__ == "__main__":
     tts = TextToSpeech()
-    
+
     with open("Tortoise_TTS_Runs.log", "a") as f:
-        f.write(f"\n\n-------------------------Tortoise TTS Logs, {datetime.now()}-------------------------\n")
+        f.write(
+            f"\n\n-------------------------Tortoise TTS Logs, {datetime.now()}-------------------------\n"
+        )
 
     main()
