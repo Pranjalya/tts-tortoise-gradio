@@ -1,3 +1,4 @@
+import os
 import gradio as gr
 import torchaudio
 import time
@@ -6,36 +7,6 @@ from tortoise.api import TextToSpeech
 from tortoise.utils.audio import load_audio, load_voice, load_voices
 
 VOICE_OPTIONS = [
-    "angie",
-    "cond_latent_example",
-    "deniro",
-    "freeman",
-    "halle",
-    "lj",
-    "myself",
-    "pat2",
-    "snakes",
-    "tom",
-    "train_daws",
-    "train_dreams",
-    "train_grace",
-    "train_lescault",
-    "weaver",
-    "applejack",
-    "daniel",
-    "emma",
-    "geralt",
-    "jlaw",
-    "mol",
-    "pat",
-    "rainbow",
-    "tim_reynolds",
-    "train_atkins",
-    "train_dotrice",
-    "train_empire",
-    "train_kennard",
-    "train_mouse",
-    "william",
     "random",  # special option for random voice
     "custom_voice",  # special option for custom voice
     "disabled",  # special option for disabled voice
@@ -95,7 +66,8 @@ def inference(text, emotion, prompt, voice, mic_audio, voice_b, voice_c, preset,
     return (
         (22050, sample_voice.squeeze().cpu().numpy()),
         (24000, gen[0].squeeze().cpu().numpy()),
-        None, None
+        None,
+        None
         # (24000, gen[1].squeeze().cpu().numpy()),
         # (24000, gen[2].squeeze().cpu().numpy()),
     )
@@ -117,19 +89,24 @@ def main():
         type="value",
     )
     voice = gr.Dropdown(
-        VOICE_OPTIONS, value="angie", label="Select voice:", type="value"
+        os.listdir(os.path.join("tortoise", "voices")) + VOICE_OPTIONS,
+        value="angie",
+        label="Select voice:",
+        type="value",
     )
     mic_audio = gr.Audio(
-        label="Record voice (when selected custom_voice):", source="microphone", type="filepath"
+        label="Record voice (when selected custom_voice):",
+        source="microphone",
+        type="filepath",
     )
     voice_b = gr.Dropdown(
-        VOICE_OPTIONS,
+        os.listdir(os.path.join("tortoise", "voices")) + VOICE_OPTIONS,
         value="disabled",
         label="(Optional) Select second voice:",
         type="value",
     )
     voice_c = gr.Dropdown(
-        VOICE_OPTIONS,
+        os.listdir(os.path.join("tortoise", "voices")) + VOICE_OPTIONS,
         value="disabled",
         label="(Optional) Select third voice:",
         type="value",
@@ -143,7 +120,17 @@ def main():
 
     interface = gr.Interface(
         fn=inference,
-        inputs=[text, emotion, prompt, voice, mic_audio, voice_b, voice_c, preset, seed],
+        inputs=[
+            text,
+            emotion,
+            prompt,
+            voice,
+            mic_audio,
+            voice_b,
+            voice_c,
+            preset,
+            seed,
+        ],
         outputs=[selected_voice, output_audio_1, output_audio_2, output_audio_3],
     )
     interface.launch(share=True)
